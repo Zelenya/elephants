@@ -1,0 +1,17 @@
+resolver: lts-21.7 
+
+packages:
+- .
+
+extra-deps:
+- beam-core-0.10.1.0
+- beam-postgres-0.5.3.1
+- beam-migrate-0.5.2.1
+- squeal-postgresql-0.9.1.3
+- records-sop-0.1.1.1
+- selda-postgresql-0.1.8.2
+- selda-0.5.2.0
+- selda-json-0.1.1.1
+
+# This is for selda (text and time dependencies)
+allow-newer: true

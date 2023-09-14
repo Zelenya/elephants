@@ -1,0 +1,21 @@
+---
+version: '3.1'
+
+services:
+  postgres:
+    image: postgres:15
+    restart: always
+    environment:
+    - POSTGRES_DB=warehouse
+    - POSTGRES_USER=postgres
+    - POSTGRES_PASSWORD=password
+    ports:
+      - 5432:5432
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 1s
+      timeout: 1s
+      retries: 5
+    volumes: 
+      - ./postgres-data:/var/lib/postgresql/data
+      - ./scripts/create_tables.sql:/docker-entrypoint-initdb.d/create_tables.sql

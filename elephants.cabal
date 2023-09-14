@@ -1,0 +1,171 @@
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.35.2.
+--
+-- see: https://github.com/sol/hpack
+
+name:           elephants
+version:        0.1.0.0
+description:    How to use PostgreSQL with Haskell
+homepage:       https://github.com/githubuser/elephants#readme
+bug-reports:    https://github.com/githubuser/elephants/issues
+author:         Elephant Man
+maintainer:     Elephant Man
+copyright:      2023 Elephant Man
+license:        BSD3
+license-file:   LICENSE
+build-type:     Simple
+extra-source-files:
+    README.md
+
+source-repository head
+  type: git
+  location: https://github.com/githubuser/elephants
+
+library
+  exposed-modules:
+      Elephants.Beam
+      Elephants.Hasql
+      Elephants.Opaleye
+      Elephants.PersistentEsqueleto
+      Elephants.PostgresqlSimple
+      Elephants.Rel8
+      Elephants.Selda
+      Elephants.Squeal
+      Hardcoded
+      Lib
+  other-modules:
+      Paths_elephants
+  hs-source-dirs:
+      src
+  default-extensions:
+      DuplicateRecordFields
+      DeriveAnyClass
+      DerivingStrategies
+      OverloadedStrings
+      OverloadedRecordDot
+      TemplateHaskell
+      QuasiQuotes
+  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints
+  build-depends:
+      base >=4.7 && <5
+    , beam-core
+    , beam-postgres
+    , contravariant-extras
+    , esqueleto
+    , exceptions
+    , generics-sop
+    , hasql
+    , hasql-th
+    , hasql-transaction
+    , monad-logger
+    , mtl
+    , opaleye
+    , persistent
+    , persistent-postgresql
+    , postgresql-simple
+    , product-profunctors
+    , profunctors
+    , rel8
+    , selda
+    , selda-postgresql
+    , squeal-postgresql
+    , text
+    , time
+    , tuple
+    , unliftio-core
+    , vector
+  default-language: GHC2021
+
+executable elephants-exe
+  main-is: Main.hs
+  other-modules:
+      Paths_elephants
+  hs-source-dirs:
+      app
+  default-extensions:
+      DuplicateRecordFields
+      DeriveAnyClass
+      DerivingStrategies
+      OverloadedStrings
+      OverloadedRecordDot
+      TemplateHaskell
+      QuasiQuotes
+  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      base >=4.7 && <5
+    , beam-core
+    , beam-postgres
+    , contravariant-extras
+    , elephants
+    , esqueleto
+    , exceptions
+    , generics-sop
+    , hasql
+    , hasql-th
+    , hasql-transaction
+    , monad-logger
+    , mtl
+    , opaleye
+    , persistent
+    , persistent-postgresql
+    , postgresql-simple
+    , product-profunctors
+    , profunctors
+    , rel8
+    , selda
+    , selda-postgresql
+    , squeal-postgresql
+    , text
+    , time
+    , tuple
+    , unliftio-core
+    , vector
+  default-language: GHC2021
+
+test-suite elephants-test
+  type: exitcode-stdio-1.0
+  main-is: Spec.hs
+  other-modules:
+      Paths_elephants
+  hs-source-dirs:
+      test
+  default-extensions:
+      DuplicateRecordFields
+      DeriveAnyClass
+      DerivingStrategies
+      OverloadedStrings
+      OverloadedRecordDot
+      TemplateHaskell
+      QuasiQuotes
+  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      base >=4.7 && <5
+    , beam-core
+    , beam-postgres
+    , contravariant-extras
+    , elephants
+    , esqueleto
+    , exceptions
+    , generics-sop
+    , hasql
+    , hasql-th
+    , hasql-transaction
+    , monad-logger
+    , mtl
+    , opaleye
+    , persistent
+    , persistent-postgresql
+    , postgresql-simple
+    , product-profunctors
+    , profunctors
+    , rel8
+    , selda
+    , selda-postgresql
+    , squeal-postgresql
+    , text
+    , time
+    , tuple
+    , unliftio-core
+    , vector
+  default-language: GHC2021

@@ -1,0 +1,92 @@
+name:                elephants
+version:             0.1.0.0
+github:              "githubuser/elephants"
+license:             BSD3
+author:              "Elephant Man"
+copyright:           "2023 Elephant Man"
+
+extra-source-files:
+- README.md
+
+description: How to use PostgreSQL with Haskell
+
+dependencies:
+- base >= 4.7 && < 5
+- text
+- postgresql-simple
+- hasql
+- hasql-th
+- hasql-transaction
+- vector
+- contravariant-extras
+- profunctors
+- tuple
+- persistent-postgresql
+- persistent
+- esqueleto
+- unliftio-core
+- monad-logger
+- mtl
+- time
+- exceptions
+- beam-core
+- beam-postgres
+- squeal-postgresql
+- generics-sop
+- opaleye
+- product-profunctors
+- rel8
+- selda
+- selda-postgresql
+# - postgresql-typed
+# - relational-record
+# - groundhog
+# - groundhog-postgresql
+# - groundhog-th
+
+ghc-options:
+- -Wall
+- -Wcompat
+- -Widentities
+- -Wincomplete-record-updates
+- -Wincomplete-uni-patterns
+- -Wmissing-export-lists
+- -Wmissing-home-modules
+- -Wpartial-fields
+- -Wredundant-constraints
+
+library:
+  source-dirs: src
+
+language: GHC2021
+
+default-extensions:
+- DuplicateRecordFields
+- DeriveAnyClass
+- DerivingStrategies
+- OverloadedStrings
+- OverloadedRecordDot
+- TemplateHaskell
+- QuasiQuotes
+
+executables:
+  elephants-exe:
+    main:                Main.hs
+    source-dirs:         app
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - elephants
+
+tests:
+  elephants-test:
+    main:                Spec.hs
+    source-dirs:         test
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - elephants
