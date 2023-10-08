@@ -219,7 +219,7 @@ queryWithJoins connection = do
   result1 <- runSelectI connection $ join
   putStrLn $ "Query with join: " <> show result1
  where
-  join :: Select (Field SqlInt4, Field SqlText, FieldNullable SqlText, FieldNullable SqlText)
+  join :: Select (Field SqlInt4, Field SqlText, FieldNullable SqlText, MaybeFields (Field SqlText))
   join = do
     (_, wProductId, quantity, _, _) <- selectTable warehouseTable
     p <- selectTable productTable
@@ -235,7 +235,7 @@ queryWithJoins connection = do
     where_ $ wProductId .=== p.pId
     where_ $ quantity .> 3
 
-    let category = maybeFieldsToNullable $ cLabel <$> mc
+    let category = cLabel <$> mc
     pure (quantity, p.pLabel, p.pDescription, category)
 
   -- This will be added to Opaleye in the future
