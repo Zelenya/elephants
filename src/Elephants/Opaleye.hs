@@ -1,3 +1,5 @@
+{-# LANGUAGE LambdaCase #-}
+
 module Elephants.Opaleye (runThis) where
 
 import Control.Exception (Exception (displayException), catch)
@@ -217,20 +219,30 @@ queryWithJoins connection = do
   result1 <- runSelectI connection $ join
   putStrLn $ "Query with join: " <> show result1
  where
-  join :: Select (Field SqlInt4, Field SqlText, FieldNullable SqlText, FieldNullable SqlText)
+  join :: Select (Field SqlInt4, Field SqlText, FieldNullable SqlText, MaybeFields (Field SqlText))
   join = do
     (_, wProductId, quantity, _, _) <- selectTable warehouseTable
     p <- selectTable productTable
-    c <- optional $ selectTable categoryTable
-    pc <- optional $ selectTable productCategoryTable
+    mpc <- optional $ do
+      pc <- selectTable productCategoryTable
+      where_ $ pc.productId .=== p.pId
+      pure pc
+    mc <- optional $ do
+      c <- selectTable categoryTable
+      where_ $ isJustAnd mpc $ \pc -> c.cId .=== pc.categoryId
+      pure c
 
     where_ $ wProductId .=== p.pId
-    where_ $ (productId <$> pc) .=== (pure p.pId)
-    where_ $ (categoryId <$> pc) .=== (cId <$> c)
     where_ $ quantity .> 3
 
-    let category = maybeFieldsToNullable $ cLabel <$> c
+    let category = cLabel <$> mc
     pure (quantity, p.pLabel, p.pDescription, category)
+
+  -- This will be added to Opaleye in the future
+  isJustAnd :: MaybeFields a -> (a -> Field SqlBool) -> Field SqlBool
+  isJustAnd ma cond = matchMaybe ma $ \case
+    Nothing -> sqlBool False
+    Just a -> cond a
 
 errors :: Connection -> IO ()
 errors connection = do
