@@ -424,7 +424,9 @@ And you don’t need more than that — if you know how to write one simple quer
 
 ### Migrations
 
-The library has a companion [`postgresql-simple-migration`](https://hackage.haskell.org/package/postgresql-simple-migration), which has been archived in has been archived in 2021. What does it mean? *I don’t know.*
+The library has a companion package, [`postgresql-migration`](https://hackage.haskell.org/package/postgresql-migration).
+
+> 🗂️ This is a fork of the archived [`postgresql-simple-migration`](https://hackage.haskell.org/package/postgresql-simple-migration).
 
 ### In summary
 
