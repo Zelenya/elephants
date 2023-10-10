@@ -2119,30 +2119,44 @@ insertWithTransaction connection = Simple.withTransaction connection $ do
 Opaleye provides a couple of APIs for joins. They recommend using [`where_`](https://hackage.haskell.org/package/opaleye-0.10.0.0/docs/Opaleye-Operators.html#v:where_) directly for inner joins and [`optional`](https://hackage.haskell.org/package/opaleye-0.10.0.0/docs/Opaleye-Join.html#v:optional) for left/right joins. Which gives us something like this:
 
 ```haskell
-join :: Select (Field SqlInt4, Field SqlText, FieldNullable SqlText, FieldNullable SqlText)
+join :: Select (Field SqlInt4, Field SqlText, FieldNullable SqlText, MaybeFields (Field SqlText))
 join = do
   (_, wProductId, quantity, _, _) <- selectTable warehouseTable
   p <- selectTable productTable
-  c <- optional $ selectTable categoryTable
-  pc <- optional $ selectTable productCategoryTable
+  mpc <- optional $ do
+    pc <- selectTable productCategoryTable
+    where_ $ pc.productId .=== p.pId
+    pure pc
+  mc <- optional $ do
+    c <- selectTable categoryTable
+    where_ $ isJustAnd mpc $ \pc -> c.cId .=== pc.categoryId
+    pure c
 
   where_ $ wProductId .=== p.pId
-  where_ $ (productId <$> pc) .=== (pure p.pId)
-  where_ $ (categoryId <$> pc) .=== (cId <$> c)
   where_ $ quantity .> 3
 
-  let category = maybeFieldsToNullable $ cLabel <$> c
+  let category = cLabel <$> mc
   pure (quantity, p.pLabel, p.pDescription, category)
 ```
 
+> 💡 Note that we use `isJustAnd` that will be added to Opaleye in the future.
+>
+> ```haskell
+> isJustAnd :: MaybeFields a -> (a -> Field SqlBool) -> Field SqlBool
+> isJustAnd ma cond = matchMaybe ma $ \case
+>   Nothing -> sqlBool False
+>   Just a -> cond a
+> ```
+
 Which generates:
 
-```haskell
+```SQL
 SELECT
 "quantity2_1" as "result1_7",
 "label1_2" as "result2_7",
 "description2_2" as "result3_7",
-CASE WHEN NOT (("rebind0_4") IS NULL) THEN "label1_3" ELSE NULL END as "result4_7"
+NOT (("rebind0_6") IS NULL) as "result4_7",
+"label1_5" as "result5_7"
 FROM (SELECT
       *
       FROM (SELECT *
@@ -2170,9 +2184,12 @@ FROM (SELECT
               TRUE as "rebind0_4",
               *
               FROM (SELECT
-                    "id" as "id0_3",
-                    "label" as "label1_3"
-                    FROM "category" as "T1") as "T1") as "T2"
+                    *
+                    FROM (SELECT
+                          "product_id" as "product_id0_3",
+                          "category_id" as "category_id1_3"
+                          FROM "product_category" as "T1") as "T1"
+                    WHERE (("product_id0_3") = ("id0_2"))) as "T1") as "T2"
              ON
              TRUE) as "T1"
             LEFT OUTER JOIN
@@ -2181,16 +2198,16 @@ FROM (SELECT
              TRUE as "rebind0_6",
              *
              FROM (SELECT
-                   "product_id" as "product_id0_5",
-                   "category_id" as "category_id1_5"
-                   FROM "product_category" as "T1") as "T1") as "T2"
+                   *
+                   FROM (SELECT
+                         "id" as "id0_5",
+                         "label" as "label1_5"
+                         FROM "category" as "T1") as "T1"
+                   WHERE (CASE WHEN NOT (("rebind0_4") IS NULL) THEN ("id0_5") = ("category_id1_3") ELSE CAST(FALSE AS boolean) END)) as "T1") as "T2"
             ON
             TRUE) as "T1"
-      WHERE (("quantity2_1") > (CAST(3 AS integer))) AND ((NOT (("rebind0_6") IS NULL)) = (NOT (("rebind0_4") IS NULL)) AND ((NOT (NOT (("rebind0_6") IS NULL))) OR (("category_id1_5") = ("id0_3")))) AND ((NOT (("rebind0_6") IS NULL)) = (CAST(TRUE AS boolean)) AND ((NOT (NOT (("rebind0_6") IS NULL))) OR (("product_id0_5") = ("id0_2")))) AND (("product_id1_1") = ("id0_2"))) as "T1"
+      WHERE (("quantity2_1") > (CAST(3 AS integer))) AND (("product_id1_1") = ("id0_2"))) as "T1"
 ```
-
-> 🤷 TBH, still not 100% sure it’s a proper way to do it (because there are no examples), but it compiles and returns what is expected, so…
-> 
 
 ### Errors
 
