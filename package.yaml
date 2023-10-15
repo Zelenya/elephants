@@ -43,6 +43,8 @@ dependencies:
 # - groundhog
 # - groundhog-postgresql
 # - groundhog-th
+- generic-persistence
+- HDBC-postgresql
 
 ghc-options:
 - -Wall

@@ -25,6 +25,7 @@ source-repository head
 library
   exposed-modules:
       Elephants.Beam
+      Elephants.GenericPersistence
       Elephants.Hasql
       Elephants.Opaleye
       Elephants.PersistentEsqueleto
@@ -48,12 +49,14 @@ library
       QuasiQuotes
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints
   build-depends:
-      base >=4.7 && <5
+      HDBC-postgresql
+    , base >=4.7 && <5
     , beam-core
     , beam-postgres
     , contravariant-extras
     , esqueleto
     , exceptions
+    , generic-persistence
     , generics-sop
     , hasql
     , hasql-th
@@ -93,13 +96,15 @@ executable elephants-exe
       QuasiQuotes
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
   build-depends:
-      base >=4.7 && <5
+      HDBC-postgresql
+    , base >=4.7 && <5
     , beam-core
     , beam-postgres
     , contravariant-extras
     , elephants
     , esqueleto
     , exceptions
+    , generic-persistence
     , generics-sop
     , hasql
     , hasql-th
@@ -140,13 +145,15 @@ test-suite elephants-test
       QuasiQuotes
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
   build-depends:
-      base >=4.7 && <5
+      HDBC-postgresql
+    , base >=4.7 && <5
     , beam-core
     , beam-postgres
     , contravariant-extras
     , elephants
     , esqueleto
     , exceptions
+    , generic-persistence
     , generics-sop
     , hasql
     , hasql-th
