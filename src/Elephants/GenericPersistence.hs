@@ -51,7 +51,6 @@ instance Entity CategoryWithId where
 
 insertStuff :: Conn -> IO ()
 insertStuff connection = do
-  let serial = 1 :: Int64 -- serial is used as a placeholder value for auto-incremented fields
   product1 <- insertReturning connection (Product serial "Wood Screw Kit 1" (Just "245-pieces"))
   putStrLn $ "Insert 1: " <> show product1
 
@@ -128,3 +127,6 @@ errors connection = do
     $ do
       [Product prodId _ _] <- select @Product connection (field "label" =. ("Wood Screw Kit 1" :: Text))
       insert connection (Product prodId "Screwdriver" Nothing)
+
+serial :: Int64
+serial = 1  -- serial is used as a placeholder value for auto-incremented fields
