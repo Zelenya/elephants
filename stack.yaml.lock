@@ -61,12 +61,12 @@ packages:
   original:
     hackage: selda-json-0.1.1.1
 - completed:
-    hackage: generic-persistence-0.5.0@sha256:5da613159a0b0533542f815738789244116f78ab83af29c47ba87aaced675da8,3061
+    hackage: generic-persistence-0.6.0@sha256:6ffb3fe9c1567cfb1ee81f966d29e4bc40574a97a407391f649deee3d60e4e0e,3269
     pantry-tree:
-      sha256: aa6793db2b85f9bcbf176d14042401ae02af0ab70100a6eed1dae827784be713
+      sha256: f40892b293c98a5926b2ce12a025e00c4b85093b64cf09a54ae589f84ccef34f
       size: 1563
   original:
-    hackage: generic-persistence-0.5.0
+    hackage: generic-persistence-0.6.0
 - completed:
     hackage: HDBC-postgresql-2.5.0.1@sha256:37bb911cd996d12c91fa711002877f32f91bcc488de76d85a05865c3af9dc580,3032
     pantry-tree:

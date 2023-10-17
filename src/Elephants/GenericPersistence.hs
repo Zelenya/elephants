@@ -1,12 +1,13 @@
+{-# OPTIONS_GHC -Wno-missing-fields #-}
 module Elephants.GenericPersistence (runThis) where
 
 import Control.Exception (handle, displayException)
 import Control.Monad (void)
 import Data.Int (Int64)
 import Data.Text (Text)
-import           Database.GP
-import           Database.HDBC.PostgreSQL (connectPostgreSQL)
-import           GHC.Generics 
+import Database.GP
+import Database.HDBC.PostgreSQL (connectPostgreSQL)
+import GHC.Generics ( Generic )
 import Hardcoded qualified
 import Data.Time.Clock (UTCTime, getCurrentTime)
 
@@ -24,46 +25,36 @@ runThis = do
   putStrLn "Done"
 
 getConnection :: IO Conn
-getConnection = connect ExplicitCommit <$> connectPostgreSQL Hardcoded.connectionString 
+getConnection = connect ExplicitCommit <$> connectPostgreSQL Hardcoded.connectionString
 
 cleanUp :: Conn -> IO ()
 cleanUp connection = runRaw connection "truncate warehouse, product_category, product, category"
 
-
 data Product = Product {id :: Int64, label :: Text, description :: Maybe Text}
   deriving (Show, Generic)
-
 instance Entity Product where
   idField = "id"
 
-
-newtype Category = Category {label :: Text}
+data Category = Category {id :: Int64, label :: Text}
   deriving (Show, Generic)
-  deriving anyclass Entity
-
-data CategoryWithId = CategoryWithId {id :: Int64, label :: Text}
-  deriving (Show, Generic)
-
-instance Entity CategoryWithId where
-  tableName = "category"
+instance Entity Category where
   idField = "id"
-
 
 insertStuff :: Conn -> IO ()
 insertStuff connection = do
-  product1 <- insertReturning connection (Product serial "Wood Screw Kit 1" (Just "245-pieces"))
+  product1 <- insert connection $ Product{label="Wood Screw Kit 1", description=Just "245-pieces"}
   putStrLn $ "Insert 1: " <> show product1
 
-  product2 <- insertReturning connection $ Product serial "Wood Screw Kit 2" Nothing
+  product2 <- insert connection $ Product{label="Wood Screw Kit 2", description=Nothing}
   putStrLn $ "Insert 2: " <> show product2
 
-  product3 <- insertReturning connection $ Product serial "Wood Screw Kit 3" Nothing
+  product3 <- insert connection $ Product{label="Wood Screw Kit 3", description=Nothing}
   putStrLn $ "Insert 3: " <> show product3
 
-  product4 <- insertReturning connection $ Product serial "Wood Screw Kit 4" (Just "245-pieces")
+  product4 <- insert connection $ Product{label="Wood Screw Kit 4", description=Just "245-pieces"}
   putStrLn $ "Insert 4: " <> show product4
 
-  let categories = [Category "Screws", Category "Wood Screws", Category "Concrete Screws"]
+  let categories = [Category{label="Screws"}, Category{label="Wood Screws"}, Category{label="Concrete Screws"}]
   insertMany connection categories
   putStrLn $ "Insert 5: " <> show (length categories) <> " categories"
   commit connection
@@ -72,8 +63,8 @@ queryData :: Conn -> IO ()
 queryData connection = do
   products1 <- select @Product connection allEntries
   putStrLn $ "Query 1: " <> show products1
-  
-  let labelWsk2 = "Wood Screw Kit 2" :: Text 
+
+  let labelWsk2 = "Wood Screw Kit 2" :: Text
       labelWsk3 = "Wood Screw Kit 3" :: Text
   products2 <- select @Product connection (field "label" =. labelWsk2)
   putStrLn $ "Query 2: " <> show products2
@@ -81,25 +72,28 @@ queryData connection = do
   products3 <- select @Product connection (field "label" `in'` [labelWsk2, labelWsk3])
   putStrLn $ "Query 3: " <> show products3
 
-
 data Warehouse = Warehouse {product_id :: Int64, quantity :: Int, created :: UTCTime, modified :: UTCTime}
-  deriving (Show, Generic, Entity)
+  deriving (Show, Generic)
+instance Entity Warehouse where
+  autoIncrement = False
 
 data ProductCategory = ProductCategory {category_id :: Int64, product_id :: Int64}
   deriving (Show, Generic)
 instance Entity ProductCategory where
+  tableName :: String
   tableName = "product_category"
+  autoIncrement = False
 
 insertWithTransaction :: Conn -> IO ()
 insertWithTransaction conn = withTransaction conn $ \connection -> do
-  (Product productId _ _)  <- insertReturning connection (Product serial "Drywall Screws Set" (Just "8000pcs"))
-  (CategoryWithId catId _) <- insertReturning connection (CategoryWithId serial "Drywall Screws")
+  (Product productId _ _)  <- insert connection (Product{label="Drywall Screws Set", description=Just "8000pcs"})
+  (Category catId _) <- insert connection (Category{label="Drywall Screws"})
 
   now <- getCurrentTime
   let warehouseEntry = Warehouse productId 10 now now
       prod2cat = ProductCategory catId productId
-  insert connection warehouseEntry
-  insert connection prod2cat
+  _ <- insert connection warehouseEntry
+  _ <- insert connection prod2cat
 
   putStrLn $ "Insert with transaction: " <> show warehouseEntry <> " and " <> show prod2cat
 
@@ -122,11 +116,6 @@ data Listing = Listing {quantity :: Int, label :: Text, description :: Maybe Tex
 
 errors :: Conn -> IO ()
 errors connection = do
-  handle @PersistenceException (\err -> putStrLn $ "\nDuplicate Insert: " <> displayException err)
-    $ void 
-    $ do
-      [Product prodId _ _] <- select @Product connection (field "label" =. ("Wood Screw Kit 1" :: Text))
-      insert connection (Product prodId "Screwdriver" Nothing)
-
-serial :: Int64
-serial = 1  -- serial is used as a placeholder value for auto-incremented fields
+  handle @PersistenceException (putStrLn . displayException)
+    $ void
+    $ select @Product connection (field "bogus field" =. ("Wood Screw Kit 1" :: Text))
