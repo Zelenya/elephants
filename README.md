@@ -2947,6 +2947,184 @@ Selda allows us to write type-safe queries in a *linear*, *natural* style.
 
 Depending on your experience and situation, you can use SeldaM straight, or you may need to get familiar with mtl, exceptions, lifting/unlifting IO, etc.
 
+## `generic-persistence`
+
+[GenericPersistence](https://github.com/thma/generic-persistence) *"is a small Haskell persistence layer for relational databases"*, which uses [GHC.Generics](https://hackage.haskell.org/package/base-4.17.0.0/docs/GHC-Generics.html).
+
+For the database connection, the library uses the [HDBC](https://hackage.haskell.org/package/HDBC) library.
+
+Install `generic-persistence` (`0.6.0` released in 2023) and `HDBC-postgresql`.
+
+### How to connect to a database
+
+Connect to the database using HDBC's `connectPostgreSQL` and `connect` with a transaction mode:
+
+```haskell
+getConnection :: IO Conn
+getConnection = connect ExplicitCommit <$> connectPostgreSQL Hardcoded.connectionString
+```
+
+Note that you can use `createConnPool` to work with a connection pool.
+
+### How to define tables
+
+First, we declare normal types and derive `Generic`, for example, for a product:
+
+```haskell
+data Product = Product {id :: Int64, label :: Text, description :: Maybe Text}
+  deriving (Show, Generic)
+```
+
+We can derive an `Entity` instance (the default implementations use `Generics`), but we want to modify a few things. For example, specify the name of the primary key:
+
+```haskell
+instance Entity Product where
+  idField = "id"
+```
+
+Or override table name and default primary-key behavior:
+
+```haskell
+instance Entity ProductCategory where
+  tableName :: String
+  tableName = "product_category"
+
+  autoIncrement = False
+```
+
+*See the [repo](https://github.com/Zelenya/elephants) for the rest of the boilerplate.*
+
+### How to modify data
+
+We can use `runRaw` to execute raw queries:
+
+```
+cleanUp :: Conn -> IO ()
+cleanUp connection = runRaw connection "truncate warehouse, product_category, product, category"
+```
+
+To insert data, we can use `insert`, which returns an inserted entity:
+
+```haskell
+product1 <- insert connection $ Product{label = "Wood Screw Kit 1", description = Just "245-pieces"}
+putStrLn $ "Insert 1: " <> show product1
+```
+
+Note that we create a `Product` and omit the `id` because we want it generated. We can see that it works as expected from the log:
+
+```
+Insert 1: Product {id = 1139, label = "Wood Screw Kit 1", description = Just "245-pieces"}
+```
+
+> 💡 Compiler isn't particularly happy about missing fields, so we have `{-# OPTIONS_GHC -Wno-missing-fields #-}` at the top of the module.
+
+We can insert multiple categories with `insertMany`:
+
+```haskell
+insertMany connection [Category{label = "Screws"}, Category{label = "Wood Screws"}, Category{label = "Concrete Screws"}]
+```
+
+The function returns `IO ()`.
+
+### How to query data
+
+We can get all the rows from the given table using `select` and `allEntries`:
+
+```haskell
+products1 <- select @Product connection allEntries
+putStrLn $ "Query 1: " <> show products1
+```
+
+`allEntries` is a where-clause expression. We can also select specific fields and narrow down the results:
+
+```haskell
+let labelWsk2 = "Wood Screw Kit 2" :: Text
+products2 <- select @Product connection (field "label" =. labelWsk2)
+putStrLn $ "Query 2: " <> show products2
+```
+
+We use `field` and `=.` to compare the fields. Note that we have to specify the type to help type inference.
+
+We can also use `in'`:
+
+```haskell
+products3 <- select @Product connection (field "label" `in'` [labelWsk2, labelWsk3])
+putStrLn $ "Query 3: " <> show products3
+```
+
+### How to use transactions
+
+We use `transaction`:
+
+```haskell
+insertWithTransaction :: Conn -> IO ()
+insertWithTransaction conn = withTransaction conn $ \connection -> do
+  (Product productId _ _) <- insert connection (Product{label = "Drywall Screws Set", description = Just "8000pcs"})
+  (Category catId _) <- insert connection (Category{label = "Drywall Screws"})
+  now <- getCurrentTime
+  _ <- insert connection (Warehouse productId 10 now now)
+  _ <- insert connection (ProductCategory catId productId)
+  putStrLn $ "Inserted with transaction"
+```
+
+We use `getCurrentTime` to explicitly get the current time.
+
+### How to query using joins
+
+We perform a custom HDBC `quickQuery` and convert the resulting rows into a list of `Listing`:
+
+```haskell
+queryWithJoins :: Conn -> IO ()
+queryWithJoins connection = do
+  let stmt =
+        [sql|
+        select w.quantity, p.label, p.description, c.label
+        from warehouse as w
+        inner join product as p on w.product_id = p.id
+        left outer join product_category as pc on p.id = pc.product_id
+        left outer join category as c on c.id = pc.category_id
+        where w.quantity > (?)|]
+  listings <- entitiesFromRows @Listing connection =<< quickQuery connection stmt [toSql (3 :: Int)]
+  putStrLn $ "Query with join: " <> show listings
+```
+
+### Errors
+
+The library provides two different APIs:
+- The default API, which uses exceptions to signal errors (as demonstrated).
+- The safe API, which uses Either to signal errors.
+
+> For more information, see [Deal with runtime exceptions or use total functions? Your choice!](https://github.com/thma/generic-persistence#deal-with-runtime-exceptions-or-use-total-functions-your-choice)
+
+For example, if we violate the uniqueness constraint, we get `PersistenceException`:
+
+```haskell
+errors :: Conn -> IO ()
+errors connection = do
+  insertDuplicateScrew
+  handle @PersistenceException (\err -> putStrLn $ "Caught SQL Error: " <> displayException err) insertDuplicateScrew
+ where
+  insertDuplicateScrew =
+    void $ insert connection $ Product{label = "Duplicate screw", description = Nothing}
+```
+
+>`Caught SQL Error: DuplicateInsert "Entity already exists in DB, use update instead"`
+>
+
+### Resources
+
+[GenericPersistence](https://github.com/thma/generic-persistence#deal-with-runtime-exceptions-or-use-total-functions-your-choice) comes with a Getting Started tutorial, explanations of the internals, a bunch of how-tos, and API documentation – pretty good coverage.
+
+### Migrations
+
+Seems like database migrations aren't in scope yet.
+
+### In summary
+
+GenericPersistence is a small Haskell persistence layer for relational databases with the design goal of minimizing the boilerplate. The library uses plain `IO` and doesn't require upper-intermediate knowledge, making it suitable for beginners.
+
+Keep in mind that the library is younger compared to the rest.
+
 ## Honorable mentions
 
 At some point, I ran out of steam and didn’t have the energy to make these things work.

@@ -8,6 +8,7 @@ import Elephants.PostgresqlSimple qualified as PostgresqlSimple
 import Elephants.Rel8 qualified as Rel8
 import Elephants.Selda qualified as Selda
 import Elephants.Squeal qualified as Squeal
+import Elephants.GenericPersistence qualified as GenericPersistence
 
 someFunc :: IO ()
 someFunc = do
@@ -19,3 +20,4 @@ someFunc = do
     Opaleye.runThis
     Rel8.runThis
     Selda.runThis
+    GenericPersistence.runThis

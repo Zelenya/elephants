@@ -12,6 +12,8 @@ extra-deps:
 - selda-postgresql-0.1.8.2
 - selda-0.5.2.0
 - selda-json-0.1.1.1
+- generic-persistence-0.6.0
+- HDBC-postgresql-2.5.0.1
 
 # This is for selda (text and time dependencies)
 allow-newer: true
