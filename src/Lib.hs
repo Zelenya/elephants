@@ -21,4 +21,3 @@ someFunc = do
     Rel8.runThis
     Selda.runThis
     GenericPersistence.runThis
-

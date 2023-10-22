@@ -38,13 +38,13 @@ dependencies:
 - rel8
 - selda
 - selda-postgresql
+- generic-persistence
+- HDBC-postgresql
 # - postgresql-typed
 # - relational-record
 # - groundhog
 # - groundhog-postgresql
 # - groundhog-th
-- generic-persistence
-- HDBC-postgresql
 
 ghc-options:
 - -Wall

@@ -1,15 +1,43 @@
 {-# OPTIONS_GHC -Wno-missing-fields #-}
+
 module Elephants.GenericPersistence (runThis) where
 
-import Control.Exception (handle, displayException)
+import Control.Exception (displayException, handle)
 import Control.Monad (void)
 import Data.Int (Int64)
 import Data.Text (Text)
+import Data.Time.Clock (UTCTime, getCurrentTime)
 import Database.GP
 import Database.HDBC.PostgreSQL (connectPostgreSQL)
-import GHC.Generics ( Generic )
+import GHC.Generics (Generic)
 import Hardcoded qualified
-import Data.Time.Clock (UTCTime, getCurrentTime)
+
+data Product = Product {id :: Int64, label :: Text, description :: Maybe Text}
+  deriving (Show, Generic)
+
+instance Entity Product where
+  idField = "id"
+
+data Category = Category {id :: Int64, label :: Text}
+  deriving (Show, Generic)
+
+instance Entity Category where
+  idField = "id"
+
+data ProductCategory = ProductCategory {category_id :: Int64, product_id :: Int64}
+  deriving (Show, Generic)
+
+instance Entity ProductCategory where
+  tableName :: String
+  tableName = "product_category"
+  autoIncrement = False
+
+data Warehouse = Warehouse {product_id :: Int64, quantity :: Int, created :: UTCTime, modified :: UTCTime}
+  deriving (Show, Generic)
+
+instance Entity Warehouse where
+  -- We ignore warehouse ids in the code
+  autoIncrement = False
 
 runThis :: IO ()
 runThis = do
@@ -25,39 +53,21 @@ runThis = do
   putStrLn "Done"
 
 getConnection :: IO Conn
-getConnection = connect ExplicitCommit <$> connectPostgreSQL Hardcoded.connectionString
+getConnection = connect AutoCommit <$> connectPostgreSQL Hardcoded.connectionString
 
 cleanUp :: Conn -> IO ()
 cleanUp connection = runRaw connection "truncate warehouse, product_category, product, category"
 
-data Product = Product {id :: Int64, label :: Text, description :: Maybe Text}
-  deriving (Show, Generic)
-instance Entity Product where
-  idField = "id"
-
-data Category = Category {id :: Int64, label :: Text}
-  deriving (Show, Generic)
-instance Entity Category where
-  idField = "id"
-
 insertStuff :: Conn -> IO ()
 insertStuff connection = do
-  product1 <- insert connection $ Product{label="Wood Screw Kit 1", description=Just "245-pieces"}
+  product1 <- insert connection $ Product{label = "Wood Screw Kit 1", description = Just "245-pieces"}
   putStrLn $ "Insert 1: " <> show product1
 
-  product2 <- insert connection $ Product{label="Wood Screw Kit 2", description=Nothing}
+  product2 <- insert connection $ Product{label = "Wood Screw Kit 2", description = Nothing}
   putStrLn $ "Insert 2: " <> show product2
 
-  product3 <- insert connection $ Product{label="Wood Screw Kit 3", description=Nothing}
-  putStrLn $ "Insert 3: " <> show product3
-
-  product4 <- insert connection $ Product{label="Wood Screw Kit 4", description=Just "245-pieces"}
-  putStrLn $ "Insert 4: " <> show product4
-
-  let categories = [Category{label="Screws"}, Category{label="Wood Screws"}, Category{label="Concrete Screws"}]
-  insertMany connection categories
-  putStrLn $ "Insert 5: " <> show (length categories) <> " categories"
-  commit connection
+  insertMany connection [Category{label = "Screws"}, Category{label = "Wood Screws"}, Category{label = "Concrete Screws"}]
+  putStrLn $ "Inserted categories"
 
 queryData :: Conn -> IO ()
 queryData connection = do
@@ -72,34 +82,19 @@ queryData connection = do
   products3 <- select @Product connection (field "label" `in'` [labelWsk2, labelWsk3])
   putStrLn $ "Query 3: " <> show products3
 
-data Warehouse = Warehouse {product_id :: Int64, quantity :: Int, created :: UTCTime, modified :: UTCTime}
-  deriving (Show, Generic)
-instance Entity Warehouse where
-  autoIncrement = False
-
-data ProductCategory = ProductCategory {category_id :: Int64, product_id :: Int64}
-  deriving (Show, Generic)
-instance Entity ProductCategory where
-  tableName :: String
-  tableName = "product_category"
-  autoIncrement = False
-
 insertWithTransaction :: Conn -> IO ()
 insertWithTransaction conn = withTransaction conn $ \connection -> do
-  (Product productId _ _)  <- insert connection (Product{label="Drywall Screws Set", description=Just "8000pcs"})
-  (Category catId _) <- insert connection (Category{label="Drywall Screws"})
-
+  (Product productId _ _) <- insert connection (Product{label = "Drywall Screws Set", description = Just "8000pcs"})
+  (Category catId _) <- insert connection (Category{label = "Drywall Screws"})
   now <- getCurrentTime
-  let warehouseEntry = Warehouse productId 10 now now
-      prod2cat = ProductCategory catId productId
-  _ <- insert connection warehouseEntry
-  _ <- insert connection prod2cat
-
-  putStrLn $ "Insert with transaction: " <> show warehouseEntry <> " and " <> show prod2cat
+  _ <- insert connection (Warehouse productId 10 now now)
+  _ <- insert connection (ProductCategory catId productId)
+  putStrLn $ "Inserted with transaction"
 
 queryWithJoins :: Conn -> IO ()
 queryWithJoins connection = do
-  let stmt = [sql|
+  let stmt =
+        [sql|
         select w.quantity, p.label, p.description, c.label
         from warehouse as w
         inner join product as p on w.product_id = p.id
@@ -111,11 +106,14 @@ queryWithJoins connection = do
   listings <- entitiesFromRows @Listing connection =<< quickQuery connection stmt [toSql (3 :: Int)]
   putStrLn $ "Query with join: " <> show listings
 
-data Listing = Listing {quantity :: Int, label :: Text, description :: Maybe Text, category :: Maybe Text}
-  deriving (Show, Generic, Entity)
-
 errors :: Conn -> IO ()
 errors connection = do
-  handle @PersistenceException (putStrLn . displayException)
-    $ void
-    $ select @Product connection (field "bogus field" =. ("Wood Screw Kit 1" :: Text))
+  insertDuplicateScrew
+  handle @PersistenceException (\err -> putStrLn $ "Caught SQL Error: " <> displayException err) insertDuplicateScrew
+ where
+  insertDuplicateScrew =
+    void $ insert connection $ Product{label = "Duplicate screw", description = Nothing}
+
+data Listing = Listing {quantity :: Int, label :: Text, description :: Maybe Text, category :: Maybe Text}
+  deriving (Show, Generic)
+  deriving anyclass (Entity)
