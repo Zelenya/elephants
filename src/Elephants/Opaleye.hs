@@ -238,12 +238,6 @@ queryWithJoins connection = do
     let category = cLabel <$> mc
     pure (quantity, p.pLabel, p.pDescription, category)
 
-  -- This will be added to Opaleye in the future
-  isJustAnd :: MaybeFields a -> (a -> Field SqlBool) -> Field SqlBool
-  isJustAnd ma cond = matchMaybe ma $ \case
-    Nothing -> sqlBool False
-    Just a -> cond a
-
 errors :: Connection -> IO ()
 errors connection = do
   insertDuplicateScrew

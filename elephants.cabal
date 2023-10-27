@@ -63,7 +63,7 @@ library
     , hasql-transaction
     , monad-logger
     , mtl
-    , opaleye
+    , opaleye >= 0.10.2.0
     , persistent
     , persistent-postgresql
     , postgresql-simple
